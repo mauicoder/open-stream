@@ -1,13 +1,15 @@
 # open-stream
 
-python tool used to extract an m3u8 playlist and start vlc using the URLS and the token
+python tool used to extract an m3u8 playlist and start vlc using the URLS and the token.
+
+This tools will use chrome and vlc to open the stream.
 
 ## How to
 first setup the env as in 
 `$ setup.sh`
 
 the find an event to what and use the tool as in 
-`$ start.sh`
+`$ start.sh your-url-here`
 
 ## Disclaimer 
 This tool is for research purpose only. Use it to learn and only in appropriated ways.
