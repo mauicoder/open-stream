@@ -8,8 +8,19 @@ This tools will use chrome and vlc to open the stream.
 first setup the env as in 
 `$ setup.sh`
 
-the find an event to what and use the tool as in 
-`$ start.sh your-url-here`
+Find an event, copy the URL and start the view.sh as
+`$./view.sh "URL"`
+
+This will start the python proxy that will handle the parsing of the url and the renewal of the token
+and start the vlc process.
+
+At the end, to stop the process and the proxy use
+`$./stop.sh`
+
+## Other tool
+
+Find an event and use the tool as in 
+`$ ./start.sh your-url-here`
 
 ## Disclaimer 
 This tool is for research purpose only. Use it to learn and only in appropriated ways.
