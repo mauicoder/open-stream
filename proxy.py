@@ -11,7 +11,6 @@ import sys
 
 app = FastAPI()
 
-# Require target URL from command-line arguments without hardcoded fallbacks
 if len(sys.argv) < 2:
   print("[-] Error: Missing target URL argument.")
   print("Usage: python proxy.py <target-url>")
@@ -21,12 +20,20 @@ TARGET_URL = sys.argv[1]
 
 current_akamai_base = None
 current_token_query = None
-last_fetch_time = 0
+
+# Persistent HTTP client with connection pooling for high-throughput video chunks
+http_client = httpx.AsyncClient(
+    limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
+    timeout=30.0
+)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+  await http_client.aclose()
 
 
 async def refresh_stream_metadata():
-  """Runs Playwright once to capture a fresh base URL and token."""
-  global current_akamai_base, current_token_query, last_fetch_time
+  global current_akamai_base, current_token_query
   print(f"[*] Fetching fresh stream token via Playwright for: {TARGET_URL}")
   
   async with async_playwright() as p:
@@ -55,7 +62,6 @@ async def refresh_stream_metadata():
     parsed = urlparse(captured_url)
     current_akamai_base = f"{parsed.scheme}://{parsed.netloc}{parsed.path.rsplit('/', 1)[0]}/"
     current_token_query = parsed.query
-    last_fetch_time = time.time()
     print(f"[+] Successfully captured base: {current_akamai_base}")
 
 
@@ -77,20 +83,19 @@ async def transparent_proxy(path: str, request: Request):
     separator = "&" if "?" in target_url else "?"
     target_url += f"{separator}{request.url.query}"
 
-  async with httpx.AsyncClient() as client:
-    res = await client.get(target_url, headers={"User-Agent": "VLC"})
-    
-    if res.status_code == 403:
-      print("[-] Received 403 Forbidden. Refreshing token...")
-      await refresh_stream_metadata()
-      target_url = f"{current_akamai_base}{path}?{current_token_query}"
-      res = await client.get(target_url, headers={"User-Agent": "VLC"})
+  res = await http_client.get(target_url, headers={"User-Agent": "VLC"})
+  
+  if res.status_code == 403:
+    print("[-] Received 403 Forbidden. Refreshing token...")
+    await refresh_stream_metadata()
+    target_url = f"{current_akamai_base}{path}?{current_token_query}"
+    res = await http_client.get(target_url, headers={"User-Agent": "VLC"})
 
-    content_type = res.headers.get("content-type", "video/mp2t")
-    if path.endswith(".m3u8"):
-      content_type = "application/vnd.apple.mpegurl"
+  content_type = res.headers.get("content-type", "video/mp2t")
+  if path.endswith(".m3u8"):
+    content_type = "application/vnd.apple.mpegurl"
 
-    return Response(content=res.content, status_code=res.status_code, media_type=content_type)
+  return Response(content=res.content, status_code=res.status_code, media_type=content_type)
 
 
 if __name__ == "__main__":

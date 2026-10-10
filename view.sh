@@ -24,7 +24,9 @@ fi
 PROXY_STREAM_URL="http://127.0.0.1:8000/master.m3u8"
 
 echo "[*] Launching VLC with transparent proxy stream..."
+
 open -na VLC --args \
     --http-user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+    --network-caching=3000 \
     "$PROXY_STREAM_URL"
 
